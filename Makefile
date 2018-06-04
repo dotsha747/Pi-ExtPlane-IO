@@ -11,6 +11,17 @@ TestMatrixOBJ=$(patsubst %.cpp, %.o, $(TestMatrixSRC))
 TestMatrixLIB=wiringPi
 TestMatrixEXE=bin/testMatrix 
 
+#testServo
+TestServoSRC=$(wildcard testServo/*.cpp)
+TestServoOBJ=$(patsubst %.cpp, %.o, $(TestServoSRC))
+TestServoLIB=wiringPi
+TestServoEXE=bin/testServo 
+
+#testADC
+TestADCSRC=$(wildcard testADC/*.cpp)
+TestADCOBJ=$(patsubst %.cpp, %.o, $(TestADCSRC))
+TestADCLIB=
+TestADCEXE=bin/testADC
 
 world: all
 
@@ -22,12 +33,20 @@ world: all
 $(TestMatrixEXE): $(TestMatrixOBJ)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestMatrixOBJ) $(patsubst %, -l%, $(TestMatrixLIB))
-	
-all: $(TestMatrixEXE)
 
-install: $(TestMatrixEXE)
+$(TestServoEXE): $(TestServoOBJ)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(TestServoOBJ) $(patsubst %, -l%, $(TestServoLIB))
+	
+$(TestADCEXE): $(TestADCOBJ)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(TestADCOBJ) $(patsubst %, -l%, $(TestADCLIB))
+	
+all: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE)
+
+install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE)
 
 clean:
-	rm -f $(TestMatrixEXE) $(TestMatrixOBJ)
+	rm -f $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestADCEXE)
 	
 distclean: clean

@@ -21,19 +21,14 @@ using namespace std;
 
 int main(int argc, char * argv[]) {
 
-
 	if (argc != 2
-			|| (
-					(strcmp(argv[1], "readall") != 0)
-					&&
-					(strcmp(argv[1], "scan") != 0)
-				)
-		) {
+			|| ((strcmp(argv[1], "readall") != 0)
+					&& (strcmp(argv[1], "scan") != 0))) {
 		cerr << "Usage: testMatrix (readall)|(scan)" << endl;
 		exit(1);
 	}
 
-	int readallFlag = strcmp (argv[1], "readall") == 0;
+	int readallFlag = strcmp(argv[1], "readall") == 0;
 
 	int inputStart;
 	int inputEnd;
@@ -71,14 +66,25 @@ int main(int argc, char * argv[]) {
 	bool first = true;
 
 	while (true) {
+
+		readallFlag
+				&& cout << "   Row: 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1" << endl
+						<< "        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5" << endl
+						<< "        - - - - - - - - - - - - - - - -" << endl
+						<< endl;
+
+		// ROWS
 		for (int output = outputStart; output <= outputEnd; output++) {
 
 			digitalWrite(output, LOW);
 
 			!readallFlag && usleep(10000);
 
-			readallFlag && cout << "Row " << setw(2) << (output-outputStart) << ": ";
+			readallFlag
+					&& cout << "Col " << setw(2) << (output - outputStart)
+							<< ": ";
 
+			// COLS
 			for (int input = inputStart; input <= inputEnd; input++) {
 
 				int state = digitalRead(input);
@@ -96,8 +102,9 @@ int main(int argc, char * argv[]) {
 
 						// announce
 						cout << buf << setfill('0') << setw(6) << tp.tv_usec
-								<< " State Change [R" << setw(2) << (input - inputStart)
-								<< "][C" << setw(2) << (output - outputStart) << "] "
+								<< " State Change [R" << setw(2)
+								<< (input - inputStart) << "][C" << setw(2)
+								<< (output - outputStart) << "] "
 								<< (state == HIGH ? "N/C" : "CON") << endl;
 					}
 					prevState[input][output] = state;
