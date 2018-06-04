@@ -1,0 +1,19 @@
+Software for my Pi I/O Board, part of my home cockpit project for my 
+home flight simulator.
+
+I'm building a I/O board for the Raspiberry Pi Zero W, which has:
+
+- 192 digital switch inputs (expandable to 256)
+- 128 constant current LED outputs, up to 60 mA per channel (expandable to 224)
+- 48 digits of 7-segment numeric displays
+- 8 characters of 14-segment alphanumeric displays
+- 16 servo outputs, 12-bit resolution
+- 8 analog inputs, 12-bit resolution
+- 24 GPIO pins for future use
+
+This software will interface the hardware with the Flight Simulator, using
+the ExtPlane plugin. Inputs will be able to trigger commands and setting
+of datarefs, and outputs can be driven by the value of datarefs.
+
+Currently still being developed, not ready for release. 
+
