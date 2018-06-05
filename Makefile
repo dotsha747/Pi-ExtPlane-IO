@@ -23,6 +23,12 @@ TestADCOBJ=$(patsubst %.cpp, %.o, $(TestADCSRC))
 TestADCLIB=
 TestADCEXE=bin/testADC
 
+#testLED
+TestLEDSRC=$(wildcard testLED/*.cpp)
+TestLEDOBJ=$(patsubst %.cpp, %.o, $(TestLEDSRC))
+TestLEDLIB=wiringPi
+TestLEDEXE=bin/testLED
+
 world: all
 
 .cpp.o:
@@ -41,12 +47,18 @@ $(TestServoEXE): $(TestServoOBJ)
 $(TestADCEXE): $(TestADCOBJ)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestADCOBJ) $(patsubst %, -l%, $(TestADCLIB))
-	
-all: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE)
 
-install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE)
+$(TestLEDEXE): $(TestLEDOBJ)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(TestLEDOBJ) $(patsubst %, -l%, $(TestLEDLIB))
+
+	
+all: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE)
+
+install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE)
 
 clean:
-	rm -f $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestADCEXE)
+	rm -f $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestADCEXE) \
+		$(TestLEDEXE) $(TestLEDOBJ)
 	
 distclean: clean

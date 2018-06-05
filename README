@@ -1,5 +1,5 @@
 Software for my Pi I/O Board, part of my home cockpit project for my 
-home flight simulator.
+flight simulator.
 
 I'm building a I/O board for the Raspiberry Pi Zero W, which has:
 
@@ -15,5 +15,5 @@ This software will interface the hardware with the Flight Simulator, using
 the ExtPlane plugin. Inputs will be able to trigger commands and setting
 of datarefs, and outputs can be driven by the value of datarefs.
 
-Currently still being developed, not ready for release. 
+Currently still being developed, not ready for actual use. 
 
