@@ -45,14 +45,6 @@ void restoreInputBuffering() {
 	tcsetattr(STDIN_FILENO, TCSANOW, &old_tio);
 }
 
-void intHandler(int dummy) {
-	restoreInputBuffering();
-	setInitState();
-
-	cout << endl << "Quit" << endl;
-
-	exit(0);
-}
 
 
 void setInitState () {
@@ -74,6 +66,14 @@ void setInitState () {
 
 }
 
+void intHandler(int dummy) {
+	restoreInputBuffering();
+	setInitState();
+
+	cout << endl << "Quit" << endl;
+
+	exit(0);
+}
 
 int main(int argc, char * argv[]) {
 
