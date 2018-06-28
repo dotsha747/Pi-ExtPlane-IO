@@ -4,6 +4,11 @@ HI="\\e[32m"
 NORMAL="\\e[37m"
 
 
+# testUI
+TestUISRC=$(wildcard testUI/*.cpp)
+TestUIOBJ=$(patsubst %.cpp, %.o, $(TestUISRC))
+TestUILIB=wiringPi
+TestUIEXE=bin/testUI
 
 # testMatrix
 TestMatrixSRC=$(wildcard testMatrix/*.cpp)
@@ -42,6 +47,10 @@ world: all
 	@/bin/echo -e "$(HI)[CPP] $<$(NORMAL):"
 	$(CXX) $(CFLAGS) -c -o $@ $<
 	
+$(TestUIEXE): $(TestUIOBJ)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(TestUIOBJ) $(patsubst %, -l%, $(TestUILIB))
+
 $(TestMatrixEXE): $(TestMatrixOBJ)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestMatrixOBJ) $(patsubst %, -l%, $(TestMatrixLIB))
@@ -63,12 +72,15 @@ $(TestSevenSegmentEXE): $(TestSevenSegmentOBJ)
 	$(CXX) -o $@ $(TestSevenSegmentOBJ) $(patsubst %, -l%, $(TestSevenSegmentLIB))
 
 	
-all: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) $(TestSevenSegmentEXE)
+all: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
+	$(TestSevenSegmentEXE) $(TestUIEXE)
 
-install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) $(TestSevenSegmentEXE)
+install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
+	$(TestSevenSegmentEXE) $(TestUIEXE)
 
 clean:
-	rm -f $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestADCEXE) \
-		$(TestLEDEXE) $(TestLEDOBJ) $(TestSevenSegmentEXE) $(TestSevenSegmentOBJ)
+	rm -f $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestUIOBJ) $(TestADCEXE) \
+		$(TestLEDEXE) $(TestLEDOBJ) $(TestSevenSegmentEXE) $(TestSevenSegmentOBJ) \
+		$(TestUIEXE)
 	
 distclean: clean
