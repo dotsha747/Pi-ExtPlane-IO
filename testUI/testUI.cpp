@@ -13,9 +13,14 @@
 #include <mutex>
 
 
-#include <wiringPi.h>
+#include "../common/GPIORPi.h"
 
 using namespace std;
+
+// global!
+GPIORPi gpiorpi;
+
+
 
 /* to test: LED2, button A, button B, buzzer.
  *
@@ -55,11 +60,7 @@ void restoreInputBuffering() {
 void intHandler(int dummy) {
 	restoreInputBuffering();
 
-	digitalWrite(12, LOW);
-	pinMode(12, INPUT);
-
-	digitalWrite(25, LOW);
-	pinMode(25, INPUT);
+	gpiorpi.cleanup();
 
 	cout << endl << "Quit" << endl;
 
@@ -90,7 +91,7 @@ void drawScreen() {
 
 }
 
-
+/*
 void buttonAEvent () {
 
 	buttonAPressed = digitalRead (23) == 0;
@@ -105,7 +106,15 @@ void buttonBEvent () {
 	delay (10);
 	drawScreen();
 }
+*/
 
+
+void buttonEvent (int pin, GPIO::STATE state) {
+
+	auto x = gpiorpi.readInput (pin);
+	cout << "buttonEvent (" << pin << ", " << (state == GPIO::STATE::HI ? "HI" : "LOW") << ")" << (x == GPIO::STATE::HI ? "HI" : "LOW") << endl;
+
+}
 
 int main(int argc, char * argv[]) {
 
@@ -113,26 +122,27 @@ int main(int argc, char * argv[]) {
 	setInputUnbuffered();
 
 	// use Broadcom BCM pin numbers
-	wiringPiSetupGpio();
+
 
 	// setup buttons
-	pinMode(23, INPUT);
-	pullUpDnControl(23, PUD_UP);
-	wiringPiISR (23, INT_EDGE_BOTH, buttonAEvent);
+	gpiorpi.setDirection (23, GPIO::DIR::IN);
+	gpiorpi.setPullUpDown (23, GPIO::PULL::UP);
+	gpiorpi.setInterruptHandler (23, GPIO::EDGE::BOTH, std::bind (&buttonEvent, placeholders::_1, placeholders::_2));
 
-	pinMode(24, INPUT);
-	pullUpDnControl(24, PUD_UP);
-	wiringPiISR (24, INT_EDGE_BOTH, buttonBEvent);
+
+	gpiorpi.setDirection (24, GPIO::DIR::IN);
+	gpiorpi.setPullUpDown (24, GPIO::PULL::UP);
+	gpiorpi.setInterruptHandler (24, GPIO::EDGE::BOTH, std::bind (&buttonEvent, placeholders::_1, placeholders::_2));
+
 
 	// setup LED
-	digitalWrite(12, LOW);
-	pinMode(12, OUTPUT);
+	gpiorpi.setDirection (12, GPIO::DIR::OUT);
+	gpiorpi.setOutput (12, GPIO::STATE::LO);
 
 	// setup buzzer
-	digitalWrite(25, LOW);
-	pinMode(25, OUTPUT);
+	gpiorpi.setDirection (25, GPIO::DIR::OUT);
+	gpiorpi.setOutput (25, GPIO::STATE::LO);
 
-	char c = 0;
 
 	while (1) {
 
@@ -144,13 +154,14 @@ int main(int argc, char * argv[]) {
 
 		case 'b':
 			buzzerOn = ! buzzerOn;
-			digitalWrite (25, buzzerOn ? HIGH: LOW);
+			gpiorpi.setOutput (25, buzzerOn ? GPIO::STATE::HI : GPIO::STATE::LO);
+
 			drawScreen ();
 			break;
 
 		case 'l':
 			led2On = ! led2On;
-			digitalWrite (12, led2On ? HIGH : LOW);
+			gpiorpi.setOutput (12, led2On ? GPIO::STATE::HI : GPIO::STATE::LO);
 			drawScreen ();
 			break;
 
