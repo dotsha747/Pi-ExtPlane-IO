@@ -18,6 +18,7 @@
 #include <iostream>
 #include <errno.h>
 #include <string.h>
+#include <tuple>
 
 using namespace std;
 
@@ -39,9 +40,6 @@ GPIORPi::GPIORPi() {
 	if ((int32_t) gpioptr == -1) {
 		throw runtime_error("GPIORPi mmap failed");
 	};
-
-	pollList = (struct pollfd *) malloc(
-	MAXRPIGPIOCOUNT * sizeof(struct pollfd));
 
 	// run "wait for interrupt loop" in a separate thread
 	threadstate = THREADSTATE::RUNNING;
@@ -70,13 +68,17 @@ void GPIORPi::cleanup() {
 		}
 	}
 
-	free(pollList);
-
 	// undo mmap
 	munmap((void *) gpioptr, blocksize);
 }
 
+
+
 void GPIORPi::setDirection(int pin, GPIO::DIR dir) {
+
+	if (debug) {
+		cout << "setDirection (" << pin << ")" << endl;
+	}
 
 	// lock for entire scope
 	std::lock_guard<std::mutex> lock(gpioRPiMutex);
@@ -109,6 +111,10 @@ void GPIORPi::setDirection(int pin, GPIO::DIR dir) {
 }
 
 void GPIORPi::setPullUpDown(int pin, GPIO::PULL upDown) {
+
+	if (debug) {
+		cout << "setPullUpDown (" << pin << ")" << endl;
+	}
 
 	// lock for entire scope
 	std::lock_guard<std::mutex> lock(gpioRPiMutex);
@@ -146,6 +152,10 @@ void GPIORPi::setPullUpDown(int pin, GPIO::PULL upDown) {
 
 void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
 
+	if (debug) {
+		cout << "setOutput(" << pin << ")" << endl;
+	}
+
 	// lock for entire scope
 	std::lock_guard<std::mutex> lock(gpioRPiMutex);
 
@@ -155,9 +165,9 @@ void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
 
 	int rc;
 	if (hilo == GPIO::STATE::HI) {
-		rc = write(gpioToValueFD[pin], "1\n", 2);
+		rc = write(pinToValueFD[pin], "1\n", 2);
 	} else {
-		rc = write(gpioToValueFD[pin], "0\n", 2);
+		rc = write(pinToValueFD[pin], "0\n", 2);
 	}
 
 	if (rc != 2) {
@@ -169,11 +179,15 @@ void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
 
 GPIO::STATE GPIORPi::readInput(int pin) {
 
+	if (debug) {
+		cout << "readInput (" << pin << ")" << endl;
+	}
+
 	if (!isExported[pin]) {
 		exportGPIO(pin);
 	}
 
-	int fd = gpioToValueFD[pin];
+	int fd = pinToValueFD[pin];
 
 	lseek(fd, 0, SEEK_SET);
 
@@ -192,11 +206,48 @@ GPIO::STATE GPIORPi::readInput(int pin) {
 void GPIORPi::setInterruptHandler(int pin, GPIO::EDGE edge,
 		std::function<void(int pin, GPIO::STATE state)> callback) {
 
+	if (debug) {
+		cout << "setInterruptHandler (" << pin << ")" << endl;
+	}
+
+	if (edge == GPIO::EDGE::NONE) {
+		clearInterruptHandler (pin);
+		return;
+	}
+
 	// lock for entire scope
 	std::lock_guard<std::mutex> lock(gpioRPiMutex);
 
-	// record callback by FD
-	pinToCallback[pin] = callback;
+	// make sure pin is exported
+	if (isExported[pin] == 0) {
+		ostringstream buf;
+		buf << "setInterruptHandler() called for unexported pin " << pin;
+		throw runtime_error (buf.str());
+	}
+
+	// lock the ISR Mutex
+	isrDataMutex.lock ();
+
+	int fd = pinToValueFD [pin];
+
+	bool found = false;
+	for (unsigned int i = 0; i < pollPins.size(); i++) {
+		if (pollPins[i] == pin) {
+			// replace existing one
+			pollCallbacks[i] = callback;
+			found = true;
+		}
+	}
+
+	if (! found) {
+		// append new one
+		pollList[pollPins.size()].fd = fd;
+		pollList[pollPins.size()].events = POLLPRI | POLLERR;
+		pollPins.push_back (pin);
+		pollCallbacks.push_back (callback);
+	}
+
+	isrDataMutex.unlock ();
 
 	// make the pin interrupt-enabled
 	ostringstream buf;
@@ -219,21 +270,47 @@ void GPIORPi::setInterruptHandler(int pin, GPIO::EDGE edge,
 	};
 	f.close();
 
-	// record this pin as being interrupt-enabled
-	interruptPins.insert(pin);
 }
 
+
 void GPIORPi::clearInterruptHandler(int pin) {
+
+	if (debug) {
+		cout << "clearInterruptHandler (" << pin << ")" << endl;
+	}
 
 	// lock for entire scope
 	std::lock_guard<std::mutex> lock(gpioRPiMutex);
 
-	if (interruptPins.find(pin) == interruptPins.end()) {
+	// make sure pin is exported
+	if (isExported[pin] == 0) {
 		ostringstream buf;
-		buf << "clearInterruptHandler() pin " << pin
-				<< " is not interrupt-enabled";
-		throw runtime_error(buf.str());
+		buf << "clearInterruptHandler() called for unexported pin " << pin;
+		throw runtime_error (buf.str());
 	}
+
+	// lock for entire scope
+	std::lock_guard<std::mutex> lock2(isrDataMutex);
+
+	// remove the array element
+	bool found = false;
+	for (unsigned int i = 0; i < pollPins.size()-1; i++) {
+
+		if (pollPins[i] == pin) {
+			found = true;
+		}
+
+		if (found) {
+			// shift next element to current
+			pollList [i] = pollList[i+1];
+			pollPins [i] = pollPins[i+1];
+			pollCallbacks[i] = pollCallbacks[i+1];
+		}
+	}
+
+	// truncate the array by 1. Leave pollList as-is.
+	pollPins.pop_back();
+	pollCallbacks.pop_back();
 
 	// set edge to none
 	ostringstream buf;
@@ -248,11 +325,6 @@ void GPIORPi::clearInterruptHandler(int pin) {
 	};
 	f.close();
 
-	// remove the callback entry
-	pinToCallback.erase(gpioToValueFD[pin]);
-
-	// remove from interrupt pin list
-	interruptPins.erase(pin);
 
 }
 
@@ -264,6 +336,10 @@ void GPIORPi::clearInterruptHandler(int pin) {
  */
 
 void GPIORPi::exportGPIO(int pin) {
+
+	if (debug) {
+		cout << "exportGPIO (" << pin << ")" << endl;
+	}
 
 	// assume the caller has locked the mutex, so we don't do it here.
 
@@ -282,23 +358,25 @@ void GPIORPi::exportGPIO(int pin) {
 	int fd = -1;
 	do {
 		usleep(1000);
+		// open the gpio value file so we can use it later.
 		fd = open(valueFilePath.str().c_str(), O_RDWR);
 	} while (fd == -1 && tries-- > 0);
 	if (fd == -1) {
 		throw runtime_error("Gave up waiting for GPIO to be exported");
 	}
 
-	// open the gpio value file so we can use it later.
-	gpioToValueFD.insert(pair<uint8_t, int>(pin, fd));
-
-	// reverse map for select()
-	valueFDtoGPIO.insert(pair<int, uint8_t>(fd, pin));
-
+	// create records
+	pinToValueFD.insert (pair<uint8_t, int> (pin, fd));
+	valueFDtoPin.insert (pair<int, uint8_t> (fd, pin));
 	isExported.set(pin);
 
 }
 
 void GPIORPi::unexportGPIO(int pin) {
+
+	if (debug) {
+		cout << "unexportGPIO (" << pin << ")" << endl;
+	}
 
 	// assume the caller has locked the mutex, so we don't do it here.
 
@@ -310,13 +388,23 @@ void GPIORPi::unexportGPIO(int pin) {
 
 	setDirection(pin, GPIO::DIR::IN);
 
+	// keep this for later
+	int fd = pinToValueFD[pin];
+
+	// remove the record
+
+	clearInterruptHandler (pin);
+
+	pinToValueFD.erase (pin);
+	valueFDtoPin.erase (fd);
+	isExported.reset(pin);
+
+
+
 	// close the corresponding gpioValueFile
-	close(gpioToValueFD[pin]);
-	valueFDtoGPIO.erase(gpioToValueFD[pin]);
-	gpioToValueFD.erase(pin);
+	close(fd);
 
-	// TODO: remove any interrupt handlers if there are
-
+	// unexport
 	ofstream f("/sys/class/gpio/unexport");
 	if (!f.is_open()) {
 		throw runtime_error("Failed to open /sys/class/gpio/unexport");
@@ -324,61 +412,50 @@ void GPIORPi::unexportGPIO(int pin) {
 	f << pin;
 	f.close();
 
-	isExported.reset(pin);
-
 }
 
 /** @brief loop waiting for interrupt to trigger */
 
 void GPIORPi::waitForInterruptLoop() {
 
-	cout << "IN THREAD!!!" << endl;
+	if (debug) {
+		cout << "IN waitforInterruptLoop()" << endl;
+	}
 
 	while (threadstate == THREADSTATE::RUNNING) {
 
-		// lock the mutex
-		gpioRPiMutex.lock();
+		// lock the ISRData mutex for pretty much the duration of the loop.
+		// anything wanting to change the ISR data needs to squeeze itself
+		// in at the end of the loop.
+
+		isrDataMutex.lock();
 
 		// do we have anything to monitor?
-		if (interruptPins.empty()) {
-			gpioRPiMutex.unlock();
+		if (pollPins.size() == 0) {
+			isrDataMutex.unlock();
 			sleep(1);
-			cerr << "NOTHING TO MONITOR" << endl;
 			continue;
 		}
 
-		// build the pollist
-		int pollCount = 0;
-		for (auto i = interruptPins.begin(); i != interruptPins.end(); i++) {
-
-			pollList[pollCount].fd = gpioToValueFD[*i];
-			pollList[pollCount].events = POLLPRI | POLLERR;
-			pollList[pollCount].revents = 0;
-			pollCount++;
-		}
-
-		gpioRPiMutex.unlock();
-
-		int ret = poll(pollList, pollCount, 10);
+		int ret = poll(pollList, pollPins.size(), 10);
 
 		if (ret == -1) {
 			ostringstream buf;
-			buf << "in waitForInterruptLoop() select() returned " << ret << ": "
+			buf << "in waitForInterruptLoop() poll() returned " << ret << ": "
 					<< strerror(errno);
+			isrDataMutex.unlock();
 			throw runtime_error(buf.str());
 		}
 
 		if (ret != 0) {
 
 			// check results
-			std::map<int, GPIO::STATE> triggeredPins;
-			gpioRPiMutex.lock();
-			pollCount = 0;
-			for (auto i = interruptPins.begin(); i != interruptPins.end();
-					i++) {
+			vector< tuple<std::function<void(int pin, GPIO::STATE state)>, int, GPIO::STATE>> triggeredPins;
+			for (unsigned int i = 0; i < pollPins.size(); i++) {
 
-				if (pollList[pollCount].revents != 0) {
-					int fd = gpioToValueFD[*i];
+				if ( pollList[i].revents != 0) {
+
+					int fd = pollList[i].fd;
 
 					lseek(fd, 0, SEEK_SET);
 					char state;
@@ -386,33 +463,35 @@ void GPIORPi::waitForInterruptLoop() {
 					if (rc != 1) {
 						ostringstream buf;
 						buf << "Failed to read from /sys/class/gpio/gpio"
-								<< (*i) << "/value; errno=" << errno << " : "
+								<< pollPins[i] << "/value; errno=" << errno << " : "
 								<< strerror(errno);
 						throw runtime_error(buf.str());
 					}
 
 					// record it for later
-					triggeredPins.insert(
-							pair<int, GPIO::STATE>(*i,
+					triggeredPins.push_back(
+							tuple<std::function<void(int pin, GPIO::STATE state)>, int, GPIO::STATE>
+								(
+									pollCallbacks[i],
+									pollPins[i],
 									state == '1' ?
-											GPIO::STATE::HI : GPIO::STATE::LO));
+											GPIO::STATE::HI : GPIO::STATE::LO
+								));
 				}
-				pollCount++;
 			}
 
-			gpioRPiMutex.unlock();
+			isrDataMutex.unlock();
 
 			// now that we've freed the mutex, call each of the triggered exceptions
 			for (auto t = triggeredPins.begin(); t != triggeredPins.end();
 					t++) {
-
-				cerr << "TRIGGERED " << t->first << endl;
-				pinToCallback[t->first](t->first, t->second);
+				get<0>(*t) (get<1>(*t), get<2> (*t));
 			}
+		} else {
+			isrDataMutex.unlock();
 		}
 	} // still running
 
-	cout << "EXITING THREAD!!" << endl;
 	threadstate = THREADSTATE::STOPPED;
 
 }

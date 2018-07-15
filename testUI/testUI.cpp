@@ -167,7 +167,6 @@ int main(int argc, char * argv[]) {
 
 		case 'q':
 			intHandler (0);
-			exit (1);
 
 		};
 
