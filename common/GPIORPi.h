@@ -23,6 +23,7 @@
 #include <vector>
 #include <mutex>
 #include <poll.h>
+#include <atomic>
 
 #include "../common/GPIOProvider.h"
 
@@ -30,6 +31,12 @@
 
 class GPIORPi: public GPIOProvider {
 protected:
+
+	GPIORPi();
+	GPIORPi (GPIORPi const &); // dont implement
+	void operator = (GPIORPi const &); // dont implement
+
+	static void atExitHandler();
 
 	// debug
 	int debug = 0;
@@ -71,14 +78,17 @@ protected:
 	struct pollfd pollList[MAXRPIGPIOCOUNT];
 	std::vector<std::function<void(int pin, GPIO::STATE state)>> pollCallbacks;
 
-	// states of the background thread
-	enum class THREADSTATE {
-		RUNNING, STOPPING, STOPPED
-	} threadstate;
+	enum class THREADSTATE { Running, Stopping, Stopped};
+	THREADSTATE threadstate;
 
 public:
-	GPIORPi();
-	virtual ~GPIORPi();
+
+	static GPIORPi & getInstance() {
+		static GPIORPi instance;
+		return instance;
+	}
+
+	virtual void shutdown();
 
 	virtual void setDirection(int pin, GPIO::DIR dir);
 	virtual void setPullUpDown(int pin, GPIO::PULL hilo);
@@ -88,7 +98,7 @@ public:
 			std::function<void(int pin, GPIO::STATE state)> callback);
 	virtual void clearInterruptHandler(int pin);
 
-	virtual void cleanup();
+
 
 	virtual void waitForInterruptLoop();
 

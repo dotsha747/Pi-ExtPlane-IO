@@ -19,10 +19,13 @@
 #include <errno.h>
 #include <string.h>
 #include <tuple>
+#include <stdlib.h>
 
 using namespace std;
 
 GPIORPi::GPIORPi() {
+
+	threadstate = THREADSTATE::Stopped;
 
 	// map gpio control registers to memory. We need this to be able to set
 	// built-in pull up/down resistors, which are not controllable via
@@ -42,24 +45,29 @@ GPIORPi::GPIORPi() {
 	};
 
 	// run "wait for interrupt loop" in a separate thread
-	threadstate = THREADSTATE::RUNNING;
 	std::thread t(&GPIORPi::waitForInterruptLoop, this);
 	t.detach();
-
 }
 
-GPIORPi::~GPIORPi() {
-	cleanup();
-}
 
-void GPIORPi::cleanup() {
+void GPIORPi::shutdown() {
 
-	// stop the interrupt handling thread
-	threadstate = THREADSTATE::STOPPING;
-	int count = 0;
-	do {
-		usleep(1000); // sleep 1 m/s
-	} while (count++ < 1000 && threadstate != THREADSTATE::STOPPED);
+	if (debug) {
+		cout << "cleanup()" << endl;
+	}
+
+	if (threadstate == THREADSTATE::Running) {
+		// stop the interrupt handling thread
+		threadstate = THREADSTATE::Stopping;
+		int count = 0;
+		do {
+			usleep(1000); // sleep 1 m/s
+		} while (count < 10000 && threadstate != THREADSTATE::Stopped);
+
+		if (threadstate != THREADSTATE::Stopped) {
+			cerr << "Oops, waitForInterruptLoop did not terminate" << endl;
+		}
+	}
 
 	// unexport all exported pins
 	for (int i = 0; i <= MAXRPIGPIOCOUNT; i++) {
@@ -309,8 +317,10 @@ void GPIORPi::clearInterruptHandler(int pin) {
 	}
 
 	// truncate the array by 1. Leave pollList as-is.
-	pollPins.pop_back();
-	pollCallbacks.pop_back();
+	if (found) {
+		pollPins.pop_back();
+		pollCallbacks.pop_back();
+	}
 
 	// set edge to none
 	ostringstream buf;
@@ -378,13 +388,13 @@ void GPIORPi::unexportGPIO(int pin) {
 		cout << "unexportGPIO (" << pin << ")" << endl;
 	}
 
-	// assume the caller has locked the mutex, so we don't do it here.
-
 	if (!isExported[pin]) {
 		ostringstream buf;
 		buf << "Can't unexport RPi GPIO pin " << pin << " as not exported";
 		throw runtime_error(buf.str());
 	}
+
+	clearInterruptHandler (pin);
 
 	setDirection(pin, GPIO::DIR::IN);
 
@@ -392,14 +402,9 @@ void GPIORPi::unexportGPIO(int pin) {
 	int fd = pinToValueFD[pin];
 
 	// remove the record
-
-	clearInterruptHandler (pin);
-
 	pinToValueFD.erase (pin);
 	valueFDtoPin.erase (fd);
 	isExported.reset(pin);
-
-
 
 	// close the corresponding gpioValueFile
 	close(fd);
@@ -422,7 +427,9 @@ void GPIORPi::waitForInterruptLoop() {
 		cout << "IN waitforInterruptLoop()" << endl;
 	}
 
-	while (threadstate == THREADSTATE::RUNNING) {
+	threadstate = THREADSTATE::Running;
+
+	while (threadstate == THREADSTATE::Running) {
 
 		// lock the ISRData mutex for pretty much the duration of the loop.
 		// anything wanting to change the ISR data needs to squeeze itself
@@ -433,7 +440,7 @@ void GPIORPi::waitForInterruptLoop() {
 		// do we have anything to monitor?
 		if (pollPins.size() == 0) {
 			isrDataMutex.unlock();
-			sleep(1);
+			usleep (1000);
 			continue;
 		}
 
@@ -492,6 +499,11 @@ void GPIORPi::waitForInterruptLoop() {
 		}
 	} // still running
 
-	threadstate = THREADSTATE::STOPPED;
+
+	threadstate = THREADSTATE::Stopped;
+
+	if (debug) {
+		cout << "STOPPED waitforInterruptLoop()" << endl;
+	}
 
 }

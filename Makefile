@@ -1,4 +1,4 @@
-CXXFLAGS =	-O2 -g -Wall -fmessage-length=0 -std=c++11 -L ./lib
+CXXFLAGS =	 -g -Wall -fmessage-length=0 -std=c++11 -L ./lib
 LDFLAGS  = -L ./common
 
 HI="\\e[32m"
