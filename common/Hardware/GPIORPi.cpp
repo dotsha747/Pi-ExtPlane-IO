@@ -5,7 +5,7 @@
  *      Author: shahada
  */
 
-#include "../common/GPIORPi.h"
+#include "GPIORPi.h"
 
 #include <sstream>
 #include <sys/mman.h>
@@ -49,11 +49,19 @@ GPIORPi::GPIORPi() {
 	t.detach();
 }
 
+GPIORPi::~GPIORPi () {
+
+	shutdown ();
+}
+
+int GPIORPi::getAddress () {
+	return 0;
+}
 
 void GPIORPi::shutdown() {
 
 	if (debug) {
-		cout << "cleanup()" << endl;
+		cout << "GPIORPi::shutdown()" << endl;
 	}
 
 	if (threadstate == THREADSTATE::Running) {
@@ -81,11 +89,14 @@ void GPIORPi::shutdown() {
 }
 
 
+int GPIORPi::getPinCount () {
+	return 28;
+}
 
-void GPIORPi::setDirection(int pin, GPIO::DIR dir) {
+void GPIORPi::setDirection(int pin, GPIODIR dir) {
 
 	if (debug) {
-		cout << "setDirection (" << pin << ")" << endl;
+		cout << "GPIORPi::setDirection (" << pin << ")" << endl;
 	}
 
 	// lock for entire scope
@@ -102,7 +113,7 @@ void GPIORPi::setDirection(int pin, GPIO::DIR dir) {
 	if (!f.is_open()) {
 		throw runtime_error("Failed to " + buf.str());
 	}
-	if (dir == GPIO::DIR::IN) {
+	if (dir == GPIODIR::IN) {
 		f << "in";
 	} else {
 		f << "out";
@@ -113,15 +124,15 @@ void GPIORPi::setDirection(int pin, GPIO::DIR dir) {
 	f.close();
 
 	// do a dummy read.
-	if (dir == GPIO::DIR::IN) {
+	if (dir == GPIODIR::IN) {
 		readInput(pin);
 	}
 }
 
-void GPIORPi::setPullUpDown(int pin, GPIO::PULL upDown) {
+void GPIORPi::setPullUpDown(int pin, GPIOPULL upDown) {
 
 	if (debug) {
-		cout << "setPullUpDown (" << pin << ")" << endl;
+		cout << "GPIORPi::setPullUpDown (" << pin << ")" << endl;
 	}
 
 	// lock for entire scope
@@ -136,13 +147,13 @@ void GPIORPi::setPullUpDown(int pin, GPIO::PULL upDown) {
 
 	int pud = 0;
 	switch (upDown) {
-	case GPIO::PULL::OFF:
+	case GPIOPULL::OFF:
 		pud = 0;
 		break;
-	case GPIO::PULL::DOWN:
+	case GPIOPULL::DOWN:
 		pud = 1;
 		break;
-	case GPIO::PULL::UP:
+	case GPIOPULL::UP:
 		pud = 2;
 		break;
 	};
@@ -158,10 +169,10 @@ void GPIORPi::setPullUpDown(int pin, GPIO::PULL upDown) {
 
 }
 
-void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
+void GPIORPi::setOutput(int pin, GPIOSTATE hilo) {
 
 	if (debug) {
-		cout << "setOutput(" << pin << ")" << endl;
+		cout << "GPIORPi::setOutput(" << pin << ")" << endl;
 	}
 
 	// lock for entire scope
@@ -172,7 +183,7 @@ void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
 	}
 
 	int rc;
-	if (hilo == GPIO::STATE::HI) {
+	if (hilo == GPIOSTATE::HI) {
 		rc = write(pinToValueFD[pin], "1\n", 2);
 	} else {
 		rc = write(pinToValueFD[pin], "0\n", 2);
@@ -185,10 +196,10 @@ void GPIORPi::setOutput(int pin, GPIO::STATE hilo) {
 	}
 }
 
-GPIO::STATE GPIORPi::readInput(int pin) {
+GPIOSTATE GPIORPi::readInput(int pin) {
 
 	if (debug) {
-		cout << "readInput (" << pin << ")" << endl;
+		cout << "GPIORPi::readInput (" << pin << ")" << endl;
 	}
 
 	if (!isExported[pin]) {
@@ -208,17 +219,17 @@ GPIO::STATE GPIORPi::readInput(int pin) {
 		throw runtime_error(buf.str());
 	};
 
-	return state == '1' ? GPIO::STATE::HI : GPIO::STATE::LO;
+	return state == '1' ? GPIOSTATE::HI : GPIOSTATE::LO;
 }
 
-void GPIORPi::setInterruptHandler(int pin, GPIO::EDGE edge,
-		std::function<void(int pin, GPIO::STATE state)> callback) {
+void GPIORPi::setInterruptHandler(int pin, GPIOEDGE edge,
+		std::function<void(int pin, GPIOSTATE state)> callback) {
 
 	if (debug) {
-		cout << "setInterruptHandler (" << pin << ")" << endl;
+		cout << "GPIORPi::setInterruptHandler (" << pin << ")" << endl;
 	}
 
-	if (edge == GPIO::EDGE::NONE) {
+	if (edge == GPIOEDGE::NONE) {
 		clearInterruptHandler (pin);
 		return;
 	}
@@ -264,11 +275,11 @@ void GPIORPi::setInterruptHandler(int pin, GPIO::EDGE edge,
 	if (!f.is_open()) {
 		throw runtime_error("Failed to open for writing " + buf.str());
 	}
-	if (edge == GPIO::EDGE::BOTH) {
+	if (edge == GPIOEDGE::BOTH) {
 		f << "both";
-	} else if (edge == GPIO::EDGE::FALLING) {
+	} else if (edge == GPIOEDGE::FALLING) {
 		f << "falling";
-	} else if (edge == GPIO::EDGE::RISING) {
+	} else if (edge == GPIOEDGE::RISING) {
 		f << "rising";
 	} else {
 		f << "none";
@@ -284,7 +295,7 @@ void GPIORPi::setInterruptHandler(int pin, GPIO::EDGE edge,
 void GPIORPi::clearInterruptHandler(int pin) {
 
 	if (debug) {
-		cout << "clearInterruptHandler (" << pin << ")" << endl;
+		cout << "GPIORPi::clearInterruptHandler (" << pin << ")" << endl;
 	}
 
 	// lock for entire scope
@@ -348,7 +359,7 @@ void GPIORPi::clearInterruptHandler(int pin) {
 void GPIORPi::exportGPIO(int pin) {
 
 	if (debug) {
-		cout << "exportGPIO (" << pin << ")" << endl;
+		cout << "GPIORPi::exportGPIO (" << pin << ")" << endl;
 	}
 
 	// assume the caller has locked the mutex, so we don't do it here.
@@ -385,7 +396,7 @@ void GPIORPi::exportGPIO(int pin) {
 void GPIORPi::unexportGPIO(int pin) {
 
 	if (debug) {
-		cout << "unexportGPIO (" << pin << ")" << endl;
+		cout << "GPIORPi::unexportGPIO (" << pin << ")" << endl;
 	}
 
 	if (!isExported[pin]) {
@@ -396,7 +407,7 @@ void GPIORPi::unexportGPIO(int pin) {
 
 	clearInterruptHandler (pin);
 
-	setDirection(pin, GPIO::DIR::IN);
+	setDirection(pin, GPIODIR::IN);
 
 	// keep this for later
 	int fd = pinToValueFD[pin];
@@ -424,7 +435,7 @@ void GPIORPi::unexportGPIO(int pin) {
 void GPIORPi::waitForInterruptLoop() {
 
 	if (debug) {
-		cout << "IN waitforInterruptLoop()" << endl;
+		cout << "THREAD waitforInterruptLoop() started" << endl;
 	}
 
 	threadstate = THREADSTATE::Running;
@@ -457,7 +468,7 @@ void GPIORPi::waitForInterruptLoop() {
 		if (ret != 0) {
 
 			// check results
-			vector< tuple<std::function<void(int pin, GPIO::STATE state)>, int, GPIO::STATE>> triggeredPins;
+			vector< tuple<std::function<void(int pin, GPIOSTATE state)>, int, GPIOSTATE>> triggeredPins;
 			for (unsigned int i = 0; i < pollPins.size(); i++) {
 
 				if ( pollList[i].revents != 0) {
@@ -477,12 +488,12 @@ void GPIORPi::waitForInterruptLoop() {
 
 					// record it for later
 					triggeredPins.push_back(
-							tuple<std::function<void(int pin, GPIO::STATE state)>, int, GPIO::STATE>
+							tuple<std::function<void(int pin, GPIOSTATE state)>, int, GPIOSTATE>
 								(
 									pollCallbacks[i],
 									pollPins[i],
 									state == '1' ?
-											GPIO::STATE::HI : GPIO::STATE::LO
+											GPIOSTATE::HI : GPIOSTATE::LO
 								));
 				}
 			}
@@ -503,7 +514,14 @@ void GPIORPi::waitForInterruptLoop() {
 	threadstate = THREADSTATE::Stopped;
 
 	if (debug) {
-		cout << "STOPPED waitforInterruptLoop()" << endl;
+		cout << "THREAD waitforInterruptLoop() stopped" << endl;
 	}
 
+}
+
+
+
+uint32_t GPIORPi::readInputSequence (int address, int startPin, int endPin) {
+
+	throw runtime_error ("Not implemented yet");
 }

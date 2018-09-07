@@ -1,0 +1,14 @@
+
+<switches>
+
+	<switch name="LIGHTS.LOGO">
+		<cn>
+			<sendCmd cmd=""/>
+		</cn>
+
+		<nc>
+			<setDataRef name="" value="" />
+		</nc>
+	</switch>
+	
+</switches>

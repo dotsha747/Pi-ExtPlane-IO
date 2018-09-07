@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--  This is the hardware definition for the PiExtPlane 737 Overhead Panel Controller 
+      https://easyeda.com/dotsha747/737_Overhead_V2-67c9db35da004699973c98284d0438f5
+      http://blog.shahada.abubakar.net/tag/piioboard
+            
+	  It provides the following virtual interfaces:
+	  
+		switch 	0...196
+		led 	0...127
+		seg7 	0...48
+		seg14 	0...8
+		io 		0...24
+		
+	  The declarations below describe how these virtual interfaces are accessible from
+	  the raspberry pi controller.
+ -->
+
+<PiExtPlaneHardware>
+
+	<!--  these two controllers server the input matrix -->
+	<mcp23017 addr="0x20" />
+	<mcp23017 addr="0x21" />
+	
+	<inputMatrix 
+		switchStart="0"
+		colInputAddr="0x20"  colStartPin="0" colEndPin="15" 
+		rowOutputAddr="0x21" rowStartPin="0" rowEndPin="15"
+	/>
+	
+	
+	<!--  this controller serve the annunciator outputs -->
+	<mcp23017 addr="0x22" />
+	
+	<dm13a ledStart="0"   chain="2" data="0x22:0" clock="0x22:1" latch="0x22:2"/>
+	<dm13a ledStart="32"  chain="2" data="0x22:0" clock="0x22:3" latch="0x22:4"/>
+	<dm13a ledStart="48"  chain="2" data="0x22:0" clock="0x22:5" latch="0x22:6"/>
+	<dm13a ledStart="64"  chain="2" data="0x22:0" clock="0x22:7" latch="0x22:8"/>
+	<dm13a ledStart="72"  chain="2" data="0x22:0" clock="0x22:9" latch="0x22:10"/>
+	<dm13a ledStart="96"  chain="2" data="0x22:0" clock="0x22:11" latch="0x22:12"/>
+	
+	
+	<!--  These two controllers are split between serving the max7219cng and io lines -->
+	<mcp23017 addr="0x23" intr="16" />
+	<mcp23017 addr="0x24" intr="20" />
+	
+	<max7219cng seg7Start="0"  chain="2" data="0x23:0" clock="0x23:1" latch="0x23:2" />
+	<max7219cng seg7Start="16" chain="2" data="0x23:0" clock="0x23:3" latch="0x23:4" />
+	<max7219cng seg7Start="32" chain="2" data="0x23:0" clock="0x23:5" latch="0x23:6" />
+	
+	<io io="0"  addr="0x24:0"  />
+	<io io="1"  addr="0x24:1"  />
+	<io io="2"  addr="0x24:2"  />
+	<io io="3"  addr="0x24:3"  />
+	<io io="4"  addr="0x24:4"  />
+	<io io="5"  addr="0x24:5"  />
+	<io io="6"  addr="0x24:6"  />
+	<io io="7"  addr="0x24:7"  />
+	<io io="8"  addr="0x24:8"  />
+	
+	<io io="9"  addr="0x24:9"  />
+	<io io="10" addr="0x24:10" />
+	<io io="11" addr="0x24:11" />
+	<io io="12" addr="0x24:12" />
+	<io io="13" addr="0x24:13" />
+	<io io="14" addr="0x24:14" />
+	<io io="15" addr="0x24:15" />
+	
+	<io io="16" addr="0x23:8"  />
+	<io io="17" addr="0x23:9"  />
+	<io io="18" addr="0x23:10" />
+	<io io="19" addr="0x23:11" />
+	<io io="20" addr="0x23:12" />
+	<io io="21" addr="0x23:13" />
+	<io io="22" addr="0x23:14" />
+	<io io="23" addr="0x23:15" />
+	
+	
+	<ht16k33 seg14Start="0" i2caddr="0x70" />
+	
+	<pca9685 servoStart="0" i2caddr="0x40" />
+	
+	<mcp3208 chipSelect="0" adcStart="0" minVal="0" maxVal="3.3" />
+	
+	
+</PiExtPlaneHardware>

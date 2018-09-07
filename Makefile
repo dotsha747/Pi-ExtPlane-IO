@@ -6,7 +6,7 @@ NORMAL="\\e[37m"
 
 
 #lib
-libSRC=$(wildcard common/*.cpp)
+libSRC=$(wildcard common/*.cpp common/*/*.cpp)
 libOBJ=$(patsubst %.cpp, %.o, $(libSRC))
 libA=common/libPiExtPlane.a
 
@@ -53,6 +53,19 @@ TestAlphaSegmentOBJ=$(patsubst %.cpp, %.o, $(TestAlphaSegmentSRC))
 TestAlphaSegmentLIB=wiringPi
 TestAlphaSegmentEXE=bin/testAlphaSegment
 
+#testZ
+TestZSRC=$(wildcard testZ/*.cpp)
+TestZOBJ=$(patsubst %.cpp, %.o, $(TestZSRC)) 
+TestZLIB=PiExtPlane pthread
+TestZEXE=bin/testZ
+
+#PiExtPlane
+PIEXTPLANEIOSRC=$(wildcard piExtPlaneIO/*.cpp)
+PIEXTPLANEIOOBJ=$(patsubst %.cpp, %.o, $(PIEXTPLANEIOSRC)) 
+PIEXTPLANEIOLIB=PiExtPlane pthread XPlaneExtPlaneClient XPlaneUDPClient tinyxml2
+PIEXTPLANEIOEXE=bin/piExtPlaneIO
+
+
 world: all
 
 .cpp.o:
@@ -92,15 +105,26 @@ $(TestAlphaSegmentEXE): $(TestAlphaSegmentOBJ)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestAlphaSegmentOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestAlphaSegmentLIB))
 	
+$(TestZEXE): $(TestZOBJ) $(libA)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(TestZOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestZLIB))	
+
+$(PIEXTPLANEIOEXE): $(PIEXTPLANEIOOBJ) $(libA)
+	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
+	$(CXX) -o $@ $(PIEXTPLANEIOOBJ) $(LDFLAGS) $(patsubst %, -l%, $(PIEXTPLANEIOLIB))	
+	
 all: $(libA) $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
-	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE)
+	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE) $(TestZEXE) \
+	$(PIEXTPLANEEXE)
 
 install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
-	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE)
+	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE) $(TestZEXE) \
+	$(PIEXTPLANEEXE)
 
 clean:
-	rm -f $(libOBJ) $(libA) $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) $(TestADCOBJ) $(TestUIOBJ) $(TestADCEXE) \
+	rm -f $(libOBJ) $(libA) $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) \
+		$(TestADCOBJ) $(TestUIOBJ) $(TestZOBJ) $(TestADCEXE) \
 		$(TestLEDEXE) $(TestLEDOBJ) $(TestSevenSegmentEXE) $(TestSevenSegmentOBJ) \
-		$(TestUIEXE)
+		$(TestUIEXE) $(TESTZEXE) $(PIEXTPLANEEXE)
 	
 distclean: clean

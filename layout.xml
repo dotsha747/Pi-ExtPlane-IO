@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+
+<!-- here we declare all our switches. Each switch is assigned a name. Switches 
+	can be made either from the matrix (given a row and column number) or from 
+	a IO line (which requires an IO number). Switches can have two states, CN 
+	(connected) or NC (not connected). Upon startup or change of aircraft, the 
+	state of each switch is published. After that, the state of the switch is 
+	published only when there is a change in value. -->
+
+<layout>
+
+	<switches>
+
+		<fromMatrix name="LIGHTS.LOGO" row="0" col="0" />
+
+		<fromIO name="LIGHTS.TAXI" io="0" />
+
+	</switches>
+
+
+	<extPlane host="auto" port="51000" />
+
+</layout>

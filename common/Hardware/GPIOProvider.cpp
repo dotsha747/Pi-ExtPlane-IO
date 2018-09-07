@@ -7,7 +7,7 @@
 
 #
 
-#include "../common/GPIOProvider.h"
+#include "GPIOProvider.h"
 
 GPIOProvider::GPIOProvider() {
 
@@ -18,3 +18,7 @@ GPIOProvider::~GPIOProvider() {
 
 }
 
+
+void GPIOProvider::setDebug(int debug) {
+	this->debug = debug;
+}

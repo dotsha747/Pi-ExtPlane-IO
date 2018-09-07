@@ -25,21 +25,15 @@
 #include <poll.h>
 #include <atomic>
 
-#include "../common/GPIOProvider.h"
+#include "GPIOProvider.h"
 
 #define MAXRPIGPIOCOUNT 26
 
 class GPIORPi: public GPIOProvider {
 protected:
 
-	GPIORPi();
-	GPIORPi (GPIORPi const &); // dont implement
-	void operator = (GPIORPi const &); // dont implement
 
 	static void atExitHandler();
-
-	// debug
-	int debug = 0;
 
 	// exports the GPIO via sysfs interface
 	virtual void exportGPIO(int pin);
@@ -76,35 +70,29 @@ protected:
 	// interrupt handler data
 	std::vector<int> pollPins;
 	struct pollfd pollList[MAXRPIGPIOCOUNT];
-	std::vector<std::function<void(int pin, GPIO::STATE state)>> pollCallbacks;
+	std::vector<std::function<void(int pin, GPIOSTATE state)>> pollCallbacks;
 
 	enum class THREADSTATE { Running, Stopping, Stopped};
 	THREADSTATE threadstate;
 
 public:
 
-	static GPIORPi & getInstance() {
-		static GPIORPi instance;
-		return instance;
-	}
+	GPIORPi();
+	virtual ~GPIORPi();
 
 	virtual void shutdown();
+	virtual int getAddress ();
 
-	virtual void setDirection(int pin, GPIO::DIR dir);
-	virtual void setPullUpDown(int pin, GPIO::PULL hilo);
-	virtual void setOutput(int pin, GPIO::STATE hilo);
-	virtual GPIO::STATE readInput(int pin);
-	virtual void setInterruptHandler(int pin, GPIO::EDGE edge,
-			std::function<void(int pin, GPIO::STATE state)> callback);
+	int getPinCount ();
+	virtual void setDirection(int pin, GPIODIR dir);
+	virtual void setPullUpDown(int pin, GPIOPULL hilo);
+	virtual void setOutput(int pin, GPIOSTATE hilo);
+	virtual GPIOSTATE readInput(int pin);
+	virtual uint32_t readInputSequence (int address, int startPin, int endPin);
+	virtual void setInterruptHandler(int pin, GPIOEDGE edge,
+			std::function<void(int pin, GPIOSTATE state)> callback);
 	virtual void clearInterruptHandler(int pin);
-
-
-
 	virtual void waitForInterruptLoop();
-
-	virtual void setDebug(int level) {
-		debug = level;
-	}
 
 
 };

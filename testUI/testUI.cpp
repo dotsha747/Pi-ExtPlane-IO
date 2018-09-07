@@ -12,7 +12,7 @@
 #include <iostream>
 #include <mutex>
 
-#include "../common/GPIORPi.h"
+#include "../common/Hardware/GPIORPi.h"
 
 using namespace std;
 
@@ -21,6 +21,8 @@ using namespace std;
  *
  *
  */
+
+GPIORPi * gpiorpi = NULL;
 
 struct termios old_tio;
 
@@ -55,7 +57,7 @@ void intHandler(int dummy) {
 
 	restoreInputBuffering();
 	cout << endl << "Quit" << endl;
-	GPIORPi::getInstance().shutdown();
+	gpiorpi->shutdown();
 
 	exit(0);
 }
@@ -80,20 +82,18 @@ void drawScreen() {
 
 }
 
-void buttonEvent(int pin, GPIO::STATE state) {
-
-	auto x = GPIORPi::getInstance().readInput(pin);
+void buttonEvent(int pin, GPIOSTATE state) {
 
 	if (pin == 23) {
-		buttonAPressed = state == GPIO::STATE::LO;
+		buttonAPressed = state == GPIOSTATE::LO;
 	} else {
-		buttonBPressed = state == GPIO::STATE::LO;
+		buttonBPressed = state == GPIOSTATE::LO;
 	}
 
 	/*
 	cout << "buttonEvent (" << pin << ", "
-			<< (state == GPIO::STATE::HI ? "HI" : "LOW") << ")"
-			<< (x == GPIO::STATE::HI ? "HI" : "LOW") << endl;
+			<< (state == GPIOSTATE::HI ? "HI" : "LOW") << ")"
+			<< (x == GPIOSTATE::HI ? "HI" : "LOW") << endl;
 	*/
 
 	drawScreen();
@@ -104,14 +104,14 @@ void morseCode(int pin, std::string msg, int timeUnit = 30) {
 	for (auto c = msg.begin(); c != msg.end(); c++) {
 		switch (*c) {
 		case '.':
-			GPIORPi::getInstance().setOutput(25, GPIO::STATE::HI);
+			gpiorpi->setOutput(25, GPIOSTATE::HI);
 			usleep(timeUnit * 1000);
-			GPIORPi::getInstance().setOutput(25, GPIO::STATE::LO);
+			gpiorpi->setOutput(25, GPIOSTATE::LO);
 			break;
 		case '-':
-			GPIORPi::getInstance().setOutput(25, GPIO::STATE::HI);
+			gpiorpi->setOutput(25, GPIOSTATE::HI);
 			usleep(timeUnit * 1000 * 3);
-			GPIORPi::getInstance().setOutput(25, GPIO::STATE::LO);
+			gpiorpi->setOutput(25, GPIOSTATE::LO);
 			break;
 		case ' ':
 			usleep(timeUnit * 1000 * 4);
@@ -128,28 +128,29 @@ int main(int argc, char * argv[]) {
 	signal(SIGINT, intHandler);
 	setInputUnbuffered();
 
-	//GPIORPi::getInstance().setDebug (1);
+	gpiorpi = new GPIORPi ();
+	// gpiorpi->setDebug (1);
 
 	// use Broadcom BCM pin numbers
 
 	// setup buttons
-	GPIORPi::getInstance().setDirection(23, GPIO::DIR::IN);
-	GPIORPi::getInstance().setPullUpDown(23, GPIO::PULL::UP);
-	GPIORPi::getInstance().setInterruptHandler(23, GPIO::EDGE::BOTH,
+	gpiorpi->setDirection(23, GPIODIR::IN);
+	gpiorpi->setPullUpDown(23, GPIOPULL::UP);
+	gpiorpi->setInterruptHandler(23, GPIOEDGE::BOTH,
 			std::bind(&buttonEvent, placeholders::_1, placeholders::_2));
 
-	GPIORPi::getInstance().setDirection(24, GPIO::DIR::IN);
-	GPIORPi::getInstance().setPullUpDown(24, GPIO::PULL::UP);
-	GPIORPi::getInstance().setInterruptHandler(24, GPIO::EDGE::BOTH,
+	gpiorpi->setDirection(24, GPIODIR::IN);
+	gpiorpi->setPullUpDown(24, GPIOPULL::UP);
+	gpiorpi->setInterruptHandler(24, GPIOEDGE::BOTH,
 			std::bind(&buttonEvent, placeholders::_1, placeholders::_2));
 
 	// setup LED
-	GPIORPi::getInstance().setDirection(12, GPIO::DIR::OUT);
-	GPIORPi::getInstance().setOutput(12, GPIO::STATE::LO);
+	gpiorpi->setDirection(12, GPIODIR::OUT);
+	gpiorpi->setOutput(12, GPIOSTATE::LO);
 
 	// setup buzzer
-	GPIORPi::getInstance().setDirection(25, GPIO::DIR::OUT);
-	GPIORPi::getInstance().setOutput(25, GPIO::STATE::LO);
+	gpiorpi->setDirection(25, GPIODIR::OUT);
+	gpiorpi->setOutput(25, GPIOSTATE::LO);
 
 	while (1) {
 
@@ -166,8 +167,8 @@ int main(int argc, char * argv[]) {
 
 		case 'l':
 			led2On = !led2On;
-			GPIORPi::getInstance().setOutput(12,
-					led2On ? GPIO::STATE::HI : GPIO::STATE::LO);
+			gpiorpi->setOutput(12,
+					led2On ? GPIOSTATE::HI : GPIOSTATE::LO);
 			drawScreen();
 			break;
 
