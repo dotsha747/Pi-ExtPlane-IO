@@ -91,9 +91,9 @@ MCP23017::MCP23017(int i2caddr, int interruptPin, int i2cbus) {
 	}
 
 	// dump IOCON
-	uint8_t b = i2c->readReg8(MCP23x17_IOCON);
-	bitset<8> bs = bitset<8>(b);
-	cerr << "IOCON is " << bs.to_string() << endl;
+	//uint8_t b = i2c->readReg8(MCP23x17_IOCON);
+	//bitset<8> bs = bitset<8>(b);
+	//cerr << "IOCON is " << bs.to_string() << endl;
 }
 
 MCP23017::~MCP23017() {

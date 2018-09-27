@@ -1,72 +1,79 @@
 CXXFLAGS =	 -g -Wall -fmessage-length=0 -std=c++11 -L ./lib
-LDFLAGS  = -L ./common
+LDFLAGS  = -L ./$(BUILDDIR)/common
 
 HI="\\e[32m"
 NORMAL="\\e[37m"
 
+BUILDDIR=output
+
 
 #lib
 libSRC=$(wildcard common/*.cpp common/*/*.cpp)
-libOBJ=$(patsubst %.cpp, %.o, $(libSRC))
-libA=common/libPiExtPlane.a
+libOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(libSRC))
+libA=$(BUILDDIR)/common/libPiExtPlane.a
 
 
 # testUI
 TestUISRC=$(wildcard testUI/*.cpp)
-TestUIOBJ=$(patsubst %.cpp, %.o, $(TestUISRC))
+TestUIOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestUISRC))
 TestUILIB=PiExtPlane pthread 
-TestUIEXE=bin/testUI
+TestUIEXE=$(BUILDDIR)/bin/testUI
 
 # testMatrix
 TestMatrixSRC=$(wildcard testMatrix/*.cpp)
-TestMatrixOBJ=$(patsubst %.cpp, %.o, $(TestMatrixSRC))
+TestMatrixOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestMatrixSRC))
 TestMatrixLIB=wiringPi
-TestMatrixEXE=bin/testMatrix 
+TestMatrixEXE=$(BUILDDIR)/bin/testMatrix 
 
 #testServo
 TestServoSRC=$(wildcard testServo/*.cpp)
-TestServoOBJ=$(patsubst %.cpp, %.o, $(TestServoSRC))
+TestServoOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestServoSRC))
 TestServoLIB=wiringPi
-TestServoEXE=bin/testServo 
+TestServoEXE=$(BUILDDIR)/bin/testServo 
 
 #testADC
 TestADCSRC=$(wildcard testADC/*.cpp)
-TestADCOBJ=$(patsubst %.cpp, %.o, $(TestADCSRC))
+TestADCOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestADCSRC))
 TestADCLIB=
-TestADCEXE=bin/testADC
+TestADCEXE=$(BUILDDIR)/bin/testADC
 
 #testLED
 TestLEDSRC=$(wildcard testLED/*.cpp)
-TestLEDOBJ=$(patsubst %.cpp, %.o, $(TestLEDSRC))
+TestLEDOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestLEDSRC))
 TestLEDLIB=wiringPi
-TestLEDEXE=bin/testLED
+TestLEDEXE=$(BUILDDIR)/bin/testLED
 
 #testSevenSegment
 TestSevenSegmentSRC=$(wildcard testSevenSegment/*.cpp)
-TestSevenSegmentOBJ=$(patsubst %.cpp, %.o, $(TestSevenSegmentSRC))
+TestSevenSegmentOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestSevenSegmentSRC))
 TestSevenSegmentLIB=wiringPi
-TestSevenSegmentEXE=bin/testSevenSegment
+TestSevenSegmentEXE=$(BUILDDIR)/bin/testSevenSegment
 
 #testAlphaSegment
 TestAlphaSegmentSRC=$(wildcard testAlphaSegment/*.cpp)
-TestAlphaSegmentOBJ=$(patsubst %.cpp, %.o, $(TestAlphaSegmentSRC))
+TestAlphaSegmentOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestAlphaSegmentSRC))
 TestAlphaSegmentLIB=wiringPi
-TestAlphaSegmentEXE=bin/testAlphaSegment
+TestAlphaSegmentEXE=$(BUILDDIR)/bin/testAlphaSegment
 
 #testZ
 TestZSRC=$(wildcard testZ/*.cpp)
-TestZOBJ=$(patsubst %.cpp, %.o, $(TestZSRC)) 
+TestZOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(TestZSRC)) 
 TestZLIB=PiExtPlane pthread
-TestZEXE=bin/testZ
+TestZEXE=$(BUILDDIR)/bin/testZ
 
 #PiExtPlane
 PIEXTPLANEIOSRC=$(wildcard piExtPlaneIO/*.cpp)
-PIEXTPLANEIOOBJ=$(patsubst %.cpp, %.o, $(PIEXTPLANEIOSRC)) 
+PIEXTPLANEIOOBJ=$(patsubst %.cpp, $(BUILDDIR)/%.o, $(PIEXTPLANEIOSRC)) 
 PIEXTPLANEIOLIB=PiExtPlane pthread XPlaneExtPlaneClient XPlaneUDPClient tinyxml2
-PIEXTPLANEIOEXE=bin/piExtPlaneIO
+PIEXTPLANEIOEXE=$(BUILDDIR)/bin/piExtPlaneIO
 
 
 world: all
+
+$(BUILDDIR)/%.o:%.cpp
+	@mkdir -p $(dir $@)
+	@/bin/echo -e "$(HI)[CPP] $<$(NORMAL):"
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 .cpp.o:
 	@mkdir -p bin
@@ -78,53 +85,59 @@ $(libA): $(libOBJ)
 	ar rvs $(libA) $(libOBJ)
 	
 $(TestUIEXE): $(TestUIOBJ) $(libA)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) $(LDFLAGS) $(TestUIOBJ) $(patsubst %, -l%, $(TestUILIB)) -o $@ 
 
 $(TestMatrixEXE): $(TestMatrixOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestMatrixOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestMatrixLIB))
 
 $(TestServoEXE): $(TestServoOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestServoOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestServoLIB))
 	
 $(TestADCEXE): $(TestADCOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestADCOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestADCLIB))
 
 $(TestLEDEXE): $(TestLEDOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestLEDOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestLEDLIB))
 	
 $(TestSevenSegmentEXE): $(TestSevenSegmentOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestSevenSegmentOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestSevenSegmentLIB))
 
 $(TestAlphaSegmentEXE): $(TestAlphaSegmentOBJ)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestAlphaSegmentOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestAlphaSegmentLIB))
 	
 $(TestZEXE): $(TestZOBJ) $(libA)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(TestZOBJ) $(LDFLAGS) $(patsubst %, -l%, $(TestZLIB))	
 
 $(PIEXTPLANEIOEXE): $(PIEXTPLANEIOOBJ) $(libA)
+	@mkdir -p $(dir $@)
 	@/bin/echo -e "$(HI)[EXE] $<$(NORMAL):"
 	$(CXX) -o $@ $(PIEXTPLANEIOOBJ) $(LDFLAGS) $(patsubst %, -l%, $(PIEXTPLANEIOLIB))	
 	
 all: $(libA) $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
 	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE) $(TestZEXE) \
-	$(PIEXTPLANEEXE)
+	$(PIEXTPLANEIOEXE)
 
 install: $(TestMatrixEXE) $(TestServoEXE) $(TestADCEXE) $(TestLEDEXE) \
 	$(TestSevenSegmentEXE) $(TestAlphaSegmentEXE) $(TestUIEXE) $(TestZEXE) \
-	$(PIEXTPLANEEXE)
+	$(PIEXTPLANEIOEXE)
 
 clean:
-	rm -f $(libOBJ) $(libA) $(TestMatrixEXE) $(TestMatrixOBJ) $(TestServoEXE) $(TestServoOBJ) \
-		$(TestADCOBJ) $(TestUIOBJ) $(TestZOBJ) $(TestADCEXE) \
-		$(TestLEDEXE) $(TestLEDOBJ) $(TestSevenSegmentEXE) $(TestSevenSegmentOBJ) \
-		$(TestUIEXE) $(TESTZEXE) $(PIEXTPLANEEXE)
+	rm -rf $(BUILDDIR)
 	
 distclean: clean

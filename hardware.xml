@@ -18,6 +18,9 @@
 
 <PiExtPlaneHardware>
 
+	<!-- buzzer -->
+	<buzzer io="0:25" />
+
 	<!--  these two controllers server the input matrix -->
 	<mcp23017 addr="0x20" />
 	<mcp23017 addr="0x21" />

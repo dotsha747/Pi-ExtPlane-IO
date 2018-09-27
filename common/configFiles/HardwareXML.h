@@ -15,7 +15,14 @@
  *
  */
 
-void readHardwareXML ();
+namespace configFiles {
 
+class HardwareXML {
+public:
+	static void readHardwareXML();
+	static void parseIO(const char * s, int & address, int & pin);
+};
+
+}
 
 #endif /* COMMON_CONFIGFILES_HARDWAREXML_H_ */
